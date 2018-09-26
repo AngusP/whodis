@@ -1,3 +1,6 @@
+# Whodis
+whodis-config.json
+
 # Redis
 *.aof
 *.rdb

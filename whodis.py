@@ -2,6 +2,7 @@
 
 import sys
 import redis
+import json
 from arpscan import ArpScanner
 from celery import Celery
 
@@ -17,6 +18,12 @@ def _parse_xadd(response):
 
 def _flatten_to_str(thing):
     return [str(item) for sublist in tuple(thing) for item in sublist]
+
+def truncate(s, max_len=20):
+    '''
+    Truncate a string
+    '''
+    return s if len(s) <= max_len else s[:max(0, max_len-3)] + '...'
 
 
 class UnstableRedis(redis.StrictRedis):
@@ -93,23 +100,34 @@ class Whodis(object):
         self.r = r
 
     def set_mac_alias(self, mac_address, name):
-        return self.r.hset('mac_addr_aliases', mac_address, name)
+        return self.r.hset('mac_addr_aliases', mac_address.lower(), name)
 
-    def get_mac_aliases(self):
+    def get_all_mac_aliases(self):
         return self.r.hgetall('mac_addr_aliases')
 
-    def get_mac_alias(self, mac_address):
-        alias = self.r.hget('mac_addr_aliases', mac_address)
-        return alias if alias else mac_address
+    def get_mac_aliases(self, *mac_addresses):
+        return self.r.hmget('mac_addr_aliases', *map(lambda x: x.lower(), mac_addresses))
+
+    def remove_mac_alias(self, mac_address):
+        return self.r.hdel('mac_addr_aliases',  mac_address.lower())
+
+    def get_ignore_macs(self):
+        return self.r.smembers('mac_addrs_ignore')
+
+    def set_ignore_macs(self, *mac_addresses):
+        return self.r.sadd('mac_addrs_ignore', *map(lambda x: x.lower(), mac_addresses))
+
+    def remove_ignored_mac(self, mac_address):
+        return self.r.srem('mac_addrs_ignore', mac_address.lower())
 
     def set_macs(self, *mac_addresses):
-        return self.r.sadd('mac_addrs', *mac_addresses)
+        return self.r.sadd('mac_addrs', *map(lambda x: x.lower(), mac_addresses))
 
     def get_macs(self):
         return self.r.smembers('mac_addrs')
 
     def rm_macs(self, *mac_addresses):
-        return self.r.srem('mac_addrs', *mac_addresses)
+        return self.r.srem('mac_addrs', *map(lambda x: x.lower(), mac_addresses))
 
     def flush_all_macs(self):
         return self.r.delete('mac_addrs')
@@ -118,23 +136,40 @@ class Whodis(object):
         '''
         Push to stream
         '''
+        ignore_macs = self.get_ignore_macs()
         p = self.r.pipeline()
         kvs = []
-        macs = set()
+        seen_macs = set()
         for result in scan:
             # Skip any macs we've already seen
-            if result['mac'] in macs:
+            if (result['mac'] in seen_macs or
+                result['mac'] in ignore_macs):
                 continue
             # Push a seen event to each MAC address
+            hw_truncated = truncate(result['hw'], 15)
             p.execute_command('XADD', 'mac_ts_{}'.format(result['mac']), '*',
-                              'ip', result['ip'], 'hw', result['hw'])
-            kvs.extend([result['mac'], result['hw']])
-            macs.add(result['mac'])
+                              'ip', result['ip'], 'hw', hw_truncated)
+            kvs.extend([result['mac'], hw_truncated])
+            seen_macs.add(result['mac'])
         # Push to an aggregate stream
         p.execute_command('XADD', 'mac_ts', '*', *kvs)
-        p.sadd('mac_addrs', *list(macs))
+        p.sadd('mac_addrs', *list(seen_macs))
         return p.execute()
 
+    def save_configuration(self):
+        '''
+        Dump ignored macs and mac aliases to JSON file
+        '''
+        ignores = sorted(list(self.get_ignore_macs()))
+        aliases = self.get_all_mac_aliases()
+        with open('whodis-config.json', 'w') as f:
+            json.dump({
+                'aliases': aliases,
+                'ignores': ignores,
+            }, f, indent=4, ensure_ascii=False, sort_keys=True)
+
+    def load_configuration(self):
+        raise NotImplementedError()
 
 
 testscan = [
@@ -162,17 +197,27 @@ w = Whodis(r)
 
 
 
-
 FREQUENCY = 30 * 60 # in seconds
 
 @app.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
-    sender.add_periodic_task(FREQUENCY, echo.s('hello world'), expires=10)
+    #sender.add_periodic_task(FREQUENCY, echo.s('hello world'), expires=10)
+    sender.add_periodic_task(FREQUENCY,
+                             arpscan_and_push.s(),
+                             expires=max(10, int(FREQUENCY * 0.25)))
 
-    
+
 @app.task
 def echo(string):
     print(string)
+
+
+@app.task
+def arpscan_and_push():
+    '''
+    Perform an ARP scan and push to Redis
+    '''
+    w.push_update(arp.scan())
 
 
 if __name__ == '__main__':
