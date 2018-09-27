@@ -3,10 +3,15 @@
 import sys
 import redis
 import json
-from arpscan import ArpScanner
-from celery import Celery
 
-app = Celery('events', broker='redis+socket:///tmp/whodis.sock')
+from arpscan import ArpScanner
+from matplotlib import cm
+
+from celery import Celery
+from flask import Flask, render_template
+
+app = Flask(__name__)
+tasks = Celery('events', broker='redis+socket:///tmp/whodis.sock')
 
 
 def _parse_xadd(response):
@@ -24,6 +29,14 @@ def truncate(s, max_len=20):
     Truncate a string
     '''
     return s if len(s) <= max_len else s[:max(0, max_len-3)] + '...'
+
+
+def rgb_to_web_hex(r,g,b):
+    '''
+    Take RGB values in [0,1] interval and produce web HEX string
+    '''
+    return "#%0.2X%0.2X%0.2X" % (int(r * 255), int(g * 255), int(b * 255))
+
 
 
 class UnstableRedis(redis.StrictRedis):
@@ -71,6 +84,13 @@ class UnstableRedis(redis.StrictRedis):
         Read a range from a stream
         '''
         return self.execute_command('XRANGE', stream, start, stop)
+
+    
+    def xrevrange(self, stream, start='+', stop='-'):
+        '''
+        Read a reversed range from a stream
+        '''
+        return self.execute_command('XREVRANGE', stream, start, stop)
 
 
     def xread(self, *args, **kwargs):
@@ -199,7 +219,7 @@ w = Whodis(r)
 
 FREQUENCY = 30 * 60 # in seconds
 
-@app.on_after_configure.connect
+@tasks.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
     #sender.add_periodic_task(FREQUENCY, echo.s('hello world'), expires=10)
     sender.add_periodic_task(FREQUENCY,
@@ -207,17 +227,30 @@ def setup_periodic_tasks(sender, **kwargs):
                              expires=max(10, int(FREQUENCY * 0.25)))
 
 
-@app.task
+@tasks.task
 def echo(string):
     print(string)
 
 
-@app.task
+@tasks.task
 def arpscan_and_push():
     '''
     Perform an ARP scan and push to Redis
     '''
     w.push_update(arp.scan())
+
+
+
+@app.route("/")
+def whodis_home():
+    '''
+    Render default time series visualisation
+    '''
+    graph = {
+        'data': None,
+        'repo_name': 'repo_name',
+    }
+    return render_template('index.html')
 
 
 if __name__ == '__main__':
@@ -226,5 +259,5 @@ if __name__ == '__main__':
     print(' W H O D I S ?')
     print(' ---')
     if len(sys.argv) > 1:
-        app.start()
+        tasks.start()
 

@@ -13,6 +13,11 @@ VENV/
 venv/
 env/
 
+# SASS
+.sass-cache/
+static/css/style.css
+static/css/style.css.map
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
