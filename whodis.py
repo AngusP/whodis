@@ -3,6 +3,7 @@
 import sys
 import redis
 import json
+import dateutils
 
 from arpscan import ArpScanner
 from matplotlib import cm
@@ -12,7 +13,6 @@ from flask import Flask, render_template
 
 app = Flask(__name__)
 tasks = Celery('events', broker='redis+socket:///tmp/whodis.sock')
-
 
 def _parse_xadd(response):
     '''
@@ -37,6 +37,16 @@ def rgb_to_web_hex(r,g,b):
     '''
     return "#%0.2X%0.2X%0.2X" % (int(r * 255), int(g * 255), int(b * 255))
 
+
+def tooltip_text(cell):
+    '''
+    Returns the tooltip text for a cell.
+    '''
+    return "<strong>No contributions</strong> on Today"
+
+app.jinja_env.filters['tooltip'] = tooltip_text
+app.jinja_env.filters['display_date'] = lambda x: x
+app.jinja_env.filters['elapsed_time'] = lambda x: x
 
 
 class UnstableRedis(redis.StrictRedis):
@@ -247,10 +257,14 @@ def whodis_home():
     Render default time series visualisation
     '''
     graph = {
-        'data': None,
+        'data': [],
         'repo_name': 'repo_name',
+        'cell_class': lambda x: 'grad2',
     }
-    return render_template('index.html')
+    months = []
+    return render_template('index.html',
+                           graph=graph,
+                           months=months)
 
 
 if __name__ == '__main__':
