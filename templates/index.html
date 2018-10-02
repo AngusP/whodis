@@ -8,33 +8,30 @@
 
     
 
-    {%- set data = graph.data -%}
     <div class="panel panel-default">
-        <div class="panel-heading">Contributions for <code>{{ graph.repo_name }}</code></div>
+        <div class="panel-heading">Week of October 1st</div>
         <div class="panel-body">
             <div class="contributions-graph">
                 <div class="calendar-row">
                     <div class="cell weekday-heading contrib_empty"></div>
-                    {% for month in months -%}
-                    {% if month -%}
-                    <div class="cell month-heading contrib_empty">{{ month }}</div>
+                    {% for step in steps -%}
+                    {% if step -%}
+                    <div class="cell month-heading contrib_empty">{{ step }}</div>
                     {% else -%}
                     <div class="cell contrib_empty"></div>
                     {% endif -%}
                     {% endfor -%}
                 </div>
-                {% for row in data -%}
                 <div class="calendar-row">
                     <div class="cell weekday-heading contrib_empty">
-                        {{ weekdays[loop.index-1] }}
+                        Day
                     </div>
-                    {% for cell in row -%}
-                    <div class="cell contrib_{{ graph.cell_class(cell) }}">
-                        <span>{{ cell|tooltip }}</span>
+                    {% for cell in data -%}
+                    <div class="cell contrib_{{ cell_class(cell) }}">
+                        <span>{{ cell | tooltip }}</span>
                     </div>
                     {% endfor %}
                 </div>
-                {% endfor %}
                 <div class="calendar-row legend">
                     <div class="cell weekday-heading contrib_empty"></div>
                     {% for _ in range(graph.data[0]|length - 6) %}
@@ -57,7 +54,7 @@
             <div class="col-md-4">
                 <p class="annotation">Total contributions</p>
                 <p class="big_stat">{{ graph.sum }}</p>
-                <p class="annotation">{{ start|display_date }} &ndash; {{ today|display_date }}</p>
+                <p class="annotation">{{ start | display_date }} &ndash; {{ today | display_date }}</p>
             </div>
             <div class="col-md-4 middle">
                 <p class="annotation">Longest streak</p>

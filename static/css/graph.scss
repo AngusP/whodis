@@ -23,16 +23,16 @@ $tooltip-top:    -45px;
 \*------------------------------------*/
 
 .panel {
-  margin-left:  auto;
-  margin-right: auto;
-  margin-top: 40px;
-  margin-bottom: 40px;
+    margin-left:  auto;
+    margin-right: auto;
+    margin-top: 40px;
+    margin-bottom: 40px;
 }
 
 .panel-heading {
-  font-size: 1.5em;
-  font-weight: bold;
-  text-align: center;
+    font-size: 1.5em;
+    font-weight: bold;
+    text-align: center;
 }
 
 
@@ -41,45 +41,46 @@ $tooltip-top:    -45px;
 \*------------------------------------*/
 
 .calendar-row {
-  display: table;
-  border-spacing: ($column-width * 2) $column_width;
+    display: table;
+    line-height: $cell-dimension;
+    border-spacing: ($column-width * 2) $column_width;
 }
 
 .cell {
-  width:      $cell-dimension;
-  height:     $cell-dimension;
-  min-width:  $cell-dimension;
-  min-height: $cell-dimension;
-  margin: $column-width;
-  display: table-cell;
-  resize: none;
+    width:      $cell-dimension;
+    height:     $cell-dimension;
+    min-width:  $cell-dimension;
+    min-height: $cell-dimension;
+    margin: $column-width;
+    display: table-cell;
+    resize: none;
 }
 
 .cell:hover {
-  border: 1px solid #333;
+    border: 1px solid #333;
 }
 
 .contrib_empty:hover {
-  border: none;
+    border: none;
 }
 
 .weekday-heading {
-  color: #ccc;
-  text-align: right;
-  font-size: 0.8em;
-  padding-right: 3px;
-  width: $cell-dimension * 2;
+    color: #ccc;
+    text-align: right;
+    font-size: 0.8em;
+    padding-right: 3px;
+    width: $cell-dimension * 2;
 }
 
 .month-heading {
-  width: 2 * ($cell-dimension + $column-width);
-  font-size: 0.8em;
-  text-align: left;
-  color: #aaa;
+    width: 2 * ($cell-dimension + $column-width);
+    font-size: 0.8em;
+    text-align: left;
+    color: #aaa;
 }
 
 .legend {
-  margin-top: 16px;
+    margin-top: 16px;
 }
 
 
@@ -92,49 +93,49 @@ $tooltip-top:    -45px;
 // been sitting in my back pocket for a while. :-/
 
 .cell {
-  position: relative;
-  z-index: 24;
+    position: relative;
+    z-index: 24;
 }
 
 .cell:hover {
-  z-index: 25;
+    z-index: 25;
 }
 
 .cell span {
-  display: none;
+    display: none;
 }
 
 .cell:hover span {
-  width:  $tooltip-width;
-  height: $tooltip-height;
-  top:    $tooltip-top;
-  left:   -($tooltip-width - $cell_dimension) / 2;
+    width:  $tooltip-width;
+    height: $tooltip-height;
+    top:    $tooltip-top;
+    left:   -($tooltip-width - $cell_dimension) / 2;
 
-  display:  inline-block;
-  position: absolute;
+    display:  inline-block;
+    position: absolute;
 
-  background-color: $tooltip-bg;
-  color: $tooltip-color;
-  text-align: center;
-  font-size: 12px;
-  border-radius: 4px;
-  line-height: $tooltip-height;
-  vertical-align: middle;
+    background-color: $tooltip-bg;
+    color: $tooltip-color;
+    text-align: center;
+    font-size: 12px;
+    border-radius: 4px;
+    line-height: $tooltip-height;
+    vertical-align: middle;
 }
 
 .cell:hover span:before {
-  border: solid;
-  border-color: $tooltip-bg transparent;
-  border-width: 7px 7px 0 7px;
-  bottom: -7px;
-  content: "";
-  left: ($tooltip-width - $cell_dimension) / 2;
-  position: absolute;
-  z-index: 99;
+    border: solid;
+    border-color: $tooltip-bg transparent;
+    border-width: 7px 7px 0 7px;
+    bottom: -7px;
+    content: "";
+    left: ($tooltip-width - $cell_dimension) / 2;
+    position: absolute;
+    z-index: 99;
 }
 
 .contrib_empty:hover span {
-  display: none;
+    display: none;
 }
 
 
@@ -143,30 +144,30 @@ $tooltip-top:    -45px;
 \*------------------------------------*/
 
 .statistics.row {
-  border-top: 1px solid #ddd;
-  width: 100%;
-  margin-left:  auto;
-  margin-right: auto;
+    border-top: 1px solid #ddd;
+    width: 100%;
+    margin-left:  auto;
+    margin-right: auto;
 }
 
 .statistics .col-md-4 {
-  text-align: center;
-  padding-bottom: 10px;
-  padding-top: 12px;
+    text-align: center;
+    padding-bottom: 10px;
+    padding-top: 12px;
 }
 
 .col-md-4.middle {
-  border-left:  1px solid #ddd;
-  border-right: 1px solid #ddd;
+    border-left:  1px solid #ddd;
+    border-right: 1px solid #ddd;
 }
 
 .annotation {
-  color: $accent-gray;
-  font-size: 0.85em;
-  margin-bottom: 2px;
+    color: $accent-gray;
+    font-size: 0.85em;
+    margin-bottom: 2px;
 }
 
 .big_stat {
-  font-size: 2.4em;
-  margin-bottom: 5px;
+    font-size: 2.4em;
+    margin-bottom: 5px;
 }

@@ -3,13 +3,14 @@
 import sys
 import redis
 import json
-import dateutils
+import arrow
+import random
 
 from arpscan import ArpScanner
 from matplotlib import cm
 
 from celery import Celery
-from flask import Flask, render_template
+from flask import Flask, render_template, Markup
 
 app = Flask(__name__)
 tasks = Celery('events', broker='redis+socket:///tmp/whodis.sock')
@@ -42,11 +43,37 @@ def tooltip_text(cell):
     '''
     Returns the tooltip text for a cell.
     '''
-    return "<strong>No contributions</strong> on Today"
+    return Markup("{} : <strong>{} devices present</strong>"
+                  "".format(humanise_cell(cell), int(len(cell[1])/2)))
+
+def humanise_cell(cell):
+    '''
+    Take Redis event ms timestamp and humaniz/se
+    '''
+    return arrow.get(float(cell[0].partition('-')[0])/1000.0).humanize()
+
+def cell_class(cell):
+    '''
+    Decide on a cell class for the data
+    TODO: Colour Scale
+    '''
+    length = len(cell[1])/2
+    if length == 0:
+        return 'grad0'
+    elif length < 6:
+        return 'grad1'
+    elif length < 8:
+        return 'grad2'
+    elif length < 12:
+        return 'grad3'
+    else:
+        return 'grad4'
 
 app.jinja_env.filters['tooltip'] = tooltip_text
-app.jinja_env.filters['display_date'] = lambda x: x
-app.jinja_env.filters['elapsed_time'] = lambda x: x
+app.jinja_env.filters['display_date'] = lambda x: x # TODO
+app.jinja_env.filters['elapsed_time'] = lambda x: x # TODO
+app.jinja_env.filters['humanise_cell'] = humanise_cell
+app.jinja_env.globals['cell_class'] = cell_class
 
 
 class UnstableRedis(redis.StrictRedis):
@@ -250,6 +277,11 @@ def arpscan_and_push():
     w.push_update(arp.scan())
 
 
+def get_daterange_today():
+    start = arrow.get(arrow.now().date())
+    end = start.shift(hours=23, minutes=59, seconds=59)
+    return start.timestamp, end.timestamp
+
 
 @app.route("/")
 def whodis_home():
@@ -259,12 +291,19 @@ def whodis_home():
     graph = {
         'data': [],
         'repo_name': 'repo_name',
-        'cell_class': lambda x: 'grad2',
     }
-    months = []
+    steps = ['00:00', '', '01:00', '', '02:00', '', '03:00', '',
+             '04:00', '', '05:00', '', '06:00', '', '07:00', '',
+             '08:00', '', '09:00', '', '10:00', '', '11:00', '',
+             '12:00', '', '13:00', '', '14:00', '', '15:00', '',
+             '16:00', '', '17:00', '', '18:00', '', '19:00', '',
+             '20:00', '', '21:00', '', '22:00', '', '21:00', '',]
+    start, end = get_daterange_today()
+    data = r.xrange('mac_ts', start*1000, end*1000)
     return render_template('index.html',
                            graph=graph,
-                           months=months)
+                           data=data,
+                           steps=steps)
 
 
 if __name__ == '__main__':
