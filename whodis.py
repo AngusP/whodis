@@ -15,6 +15,10 @@ from flask import Flask, render_template, Markup
 app = Flask(__name__)
 tasks = Celery('events', broker='redis+socket:///tmp/whodis.sock')
 
+cmap = cm.get_cmap('summer_r')
+colours = cmap(range(256))
+
+
 def _parse_xadd(response):
     '''
     Parse the response back from the server
@@ -32,9 +36,9 @@ def truncate(s, max_len=20):
     return s if len(s) <= max_len else s[:max(0, max_len-3)] + '...'
 
 
-def rgb_to_web_hex(r,g,b):
+def rgb_to_web_hex(r,g,b,a=None):
     '''
-    Take RGB values in [0,1] interval and produce web HEX string
+    Take RGB(A) values in [0,1] interval and produce web HEX string
     '''
     return "#%0.2X%0.2X%0.2X" % (int(r * 255), int(g * 255), int(b * 255))
 
@@ -51,6 +55,18 @@ def humanise_cell(cell):
     Take Redis event ms timestamp and humaniz/se
     '''
     return arrow.get(float(cell[0].partition('-')[0])/1000.0).humanize()
+
+
+def colourmap(point, range_min=0, range_max=256):
+    '''
+    Take a point in the range (range_min, range_max)
+    and map it on to a colour map, returning a RGB tuple
+    '''
+    step = (range_max - range_min) / 256
+    map_position = int(float(len(point[1])/2) / step)
+    return rgb_to_web_hex(*colours[map_position % 256])
+
+
 
 def cell_class(cell):
     '''
@@ -73,6 +89,8 @@ app.jinja_env.filters['tooltip'] = tooltip_text
 app.jinja_env.filters['display_date'] = lambda x: x # TODO
 app.jinja_env.filters['elapsed_time'] = lambda x: x # TODO
 app.jinja_env.filters['humanise_cell'] = humanise_cell
+app.jinja_env.globals['rgb_to_hex'] = rgb_to_web_hex
+app.jinja_env.globals['colourmap'] = colourmap
 app.jinja_env.globals['cell_class'] = cell_class
 
 
@@ -277,10 +295,18 @@ def arpscan_and_push():
     w.push_update(arp.scan())
 
 
-def get_daterange_today():
-    start = arrow.get(arrow.now().date())
-    end = start.shift(hours=23, minutes=59, seconds=59)
-    return start.timestamp, end.timestamp
+def gen_dateranges(latest, step, count):
+    '''
+    Generate a list of UNIX timestamp tuples
+    that cover the step amount of time (secs), going back
+    count * step in the past before latest
+    '''
+    window_start = latest
+    window_stop = None
+    for i in range(count):
+        window_stop = window_start.shift(seconds=-step)
+        yield (window_start.timestamp, window_stop.timestamp)
+        window_start = window_stop.shift(seconds=-1)
 
 
 @app.route("/")
@@ -298,8 +324,9 @@ def whodis_home():
              '12:00', '', '13:00', '', '14:00', '', '15:00', '',
              '16:00', '', '17:00', '', '18:00', '', '19:00', '',
              '20:00', '', '21:00', '', '22:00', '', '21:00', '',]
-    start, end = get_daterange_today()
-    data = r.xrange('mac_ts', start*1000, end*1000)
+    start, end = list(gen_dateranges(arrow.now(), 60*60*24, 1))[0]
+    #data = r.xrange('mac_ts', start*1000, end*1000)
+    data = r.xrange('mac_ts', '-', '+')
     return render_template('index.html',
                            graph=graph,
                            data=data,

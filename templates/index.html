@@ -27,14 +27,15 @@
                         Day
                     </div>
                     {% for cell in data -%}
-                    <div class="cell contrib_{{ cell_class(cell) }}">
+                    <div class="cell contrib_{{ cell_class(cell) }}"
+                         style="background-color: {{ colourmap(cell) }} !important;">
                         <span>{{ cell | tooltip }}</span>
                     </div>
                     {% endfor %}
                 </div>
                 <div class="calendar-row legend">
                     <div class="cell weekday-heading contrib_empty"></div>
-                    {% for _ in range(graph.data[0]|length - 6) %}
+                    {% for _ in range(data | length - 7) %}
                     <div class="cell contrib_empty"></div>
                     {% endfor %}
                     <div class="cell contrib_empty month-heading">Less</div>
