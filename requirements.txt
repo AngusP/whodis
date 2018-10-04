@@ -1,4 +1,5 @@
 amqp==2.3.2
+arrow==0.12.1
 backcall==0.1.0
 billiard==3.5.0.4
 celery==4.2.1
