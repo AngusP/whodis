@@ -272,7 +272,7 @@ w = Whodis(r)
 
 
 
-FREQUENCY = 30 * 60 # in seconds
+FREQUENCY = 15 * 60 # in seconds
 
 @tasks.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
